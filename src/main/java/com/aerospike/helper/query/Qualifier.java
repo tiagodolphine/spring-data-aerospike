@@ -97,9 +97,9 @@ public class Qualifier implements Map<String, Object>{
 		FilterOperation op = getOperation();
 		switch (op) {
 		case EQ:
-			return Filter.equal(getField(), getValue1());
+			//return Filter.equal(getField(), getValue1());
 		case BETWEEN:
-			return Filter.range(getField(), getValue1(), getValue2());
+			//return Filter.range(getField(), getValue1(), getValue2());
 		default:
 			return null;
 		}

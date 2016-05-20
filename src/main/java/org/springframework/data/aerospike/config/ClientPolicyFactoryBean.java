@@ -46,7 +46,7 @@ public class ClientPolicyFactoryBean implements FactoryBean<ClientPolicy> {
 	 * @param maxThreads
 	 */
 	public void setMaxThreads(int maxThreads) {
-		this.policy.maxThreads = maxThreads;
+		this.policy.maxConnsPerNode = maxThreads;
 	}
 	/**
 	 * Configures the timeout for a client connection when opening a connection 

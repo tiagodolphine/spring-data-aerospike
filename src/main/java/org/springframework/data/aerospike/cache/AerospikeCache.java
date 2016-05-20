@@ -50,6 +50,9 @@ public class AerospikeCache implements Cache{
 	@Override
 	public ValueWrapper get(Object key) {
 		Record record =  client.get(null, getKey(key));
+		if(record == null){
+			return null;
+		}
 		ValueWrapper vr = toWrapper(record.getValue(VALUE));
 		return vr;
 	}
