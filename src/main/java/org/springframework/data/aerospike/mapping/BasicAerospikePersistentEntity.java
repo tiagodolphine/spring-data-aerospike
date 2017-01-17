@@ -15,7 +15,6 @@
  *******************************************************************************/
 package org.springframework.data.aerospike.mapping;
 
-import org.springframework.data.keyvalue.core.mapping.KeyValuePersistentProperty;
 import org.springframework.data.mapping.model.BasicPersistentEntity;
 import org.springframework.data.util.TypeInformation;
 
@@ -48,7 +47,7 @@ public class BasicAerospikePersistentEntity<T> extends BasicPersistentEntity<T, 
 	 */
 	@Override
 	public String getSetName() {
-		return typeInformation.getType().getSimpleName();
+		return AerospikeSimpleTypes.getColletionName(typeInformation.getType());
 	}
 
 	@Override

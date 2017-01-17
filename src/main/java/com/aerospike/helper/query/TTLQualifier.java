@@ -16,16 +16,21 @@
 package com.aerospike.helper.query;
 
 import com.aerospike.client.Value;
+
 /**
  * Time to live qualifier - not necessary
- * @author peter
  *
+ * @author peter
  */
 @Deprecated
 public class TTLQualifier extends Qualifier {
+
+	private static final long serialVersionUID = 6046689757998013095L;
+
 	public TTLQualifier(Value value) {
 		super(QueryEngine.Meta.TTL.toString(), FilterOperation.EQ, value);
 	}
+
 	@Override
 	protected String luaFieldString(String field) {
 		return "expiry";

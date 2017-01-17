@@ -28,10 +28,11 @@ import com.aerospike.client.Record;
 import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.ResultSet;
+
 /**
  * Iterator for traversing a collection of KeyRecords
- * @author peter
  *
+ * @author peter
  */
 public class KeyRecordIterator implements Iterator<KeyRecord>, Closeable {
 	private static final String META_DATA = "meta_data";
@@ -46,7 +47,8 @@ public class KeyRecordIterator implements Iterator<KeyRecord>, Closeable {
 	private Iterator<Object> resultSetIterator;
 	private String namespace;
 	private KeyRecord singleRecord;
-	
+	private Integer closeLock = new Integer(0);
+
 	public KeyRecordIterator(String namespace) {
 		super();
 		this.namespace = namespace;
@@ -63,22 +65,23 @@ public class KeyRecordIterator implements Iterator<KeyRecord>, Closeable {
 		this.recordSetIterator = recordSet.iterator();
 	}
 
-
 	public KeyRecordIterator(String namespace, ResultSet resultSet) {
 		this(namespace);
 		this.resultSet = resultSet;
 		this.resultSetIterator = resultSet.iterator();
-		
+
 	}
 
 	@Override
 	public void close() throws IOException {
-		if (recordSet != null)
-			recordSet.close();
-		if (resultSet != null)
-			resultSet.close();
-		if (singleRecord != null)
-			singleRecord = null;
+		synchronized (closeLock) {
+			if (recordSet != null)
+				recordSet.close();
+			if (resultSet != null)
+				resultSet.close();
+			if (singleRecord != null)
+				singleRecord = null;
+		}
 	}
 
 	@Override
@@ -89,7 +92,7 @@ public class KeyRecordIterator implements Iterator<KeyRecord>, Closeable {
 			return this.resultSetIterator.hasNext();
 		else if (this.singleRecord != null)
 			return true;
-		else 
+		else
 			return false;
 	}
 
@@ -102,21 +105,20 @@ public class KeyRecordIterator implements Iterator<KeyRecord>, Closeable {
 			keyRecord = this.recordSetIterator.next();
 		} else if (this.resultSetIterator != null) {
 			Map<String, Object> map = (Map<String, Object>) this.resultSetIterator.next();
-			Map<String,Object> meta = (Map<String, Object>) map.get(META_DATA);
+			Map<String, Object> meta = (Map<String, Object>) map.get(META_DATA);
 			map.remove(META_DATA);
-			Map<String,Object> binMap = new HashMap<String, Object>(map);
-			if (log.isDebugEnabled()){
-				for (Map.Entry<String, Object> entry : map.entrySet())
-				{
+			Map<String, Object> binMap = new HashMap<String, Object>(map);
+			if (log.isDebugEnabled()) {
+				for (Map.Entry<String, Object> entry : map.entrySet()) {
 					log.debug(entry.getKey() + " = " + entry.getValue());
 				}
 			}
-			Long generation =  (Long) meta.get(GENERATION);
-			Long ttl =  (Long) meta.get(EXPIRY);
+			Long generation = (Long) meta.get(GENERATION);
+			Long ttl = (Long) meta.get(EXPIRY);
 			Record record = new Record(binMap, generation.intValue(), ttl.intValue());
 			Key key = new Key(namespace, (byte[]) meta.get(DIGEST), (String) meta.get(SET_NAME), null);
-			keyRecord = new KeyRecord(key , record);
-		} else if (singleRecord != null){
+			keyRecord = new KeyRecord(key, record);
+		} else if (singleRecord != null) {
 			keyRecord = singleRecord;
 			singleRecord = null;
 		}
@@ -125,9 +127,9 @@ public class KeyRecordIterator implements Iterator<KeyRecord>, Closeable {
 
 	@Override
 	public void remove() {
-		
+
 	}
-	
+
 	@Override
 	public String toString() {
 		return this.namespace;

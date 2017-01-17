@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 the original author or authors.
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *  
- * 		http://www.apache.org/licenses/LICENSE-2.0
- *  	
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,6 +15,14 @@
  *******************************************************************************/
 package org.springframework.data.aerospike.mapping;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mapping.Association;
+import org.springframework.data.mapping.PersistentEntity;
+import org.springframework.data.mapping.model.*;
+import org.springframework.util.StringUtils;
+
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.util.HashSet;
@@ -22,20 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mapping.Association;
-import org.springframework.data.mapping.PersistentEntity;
-import org.springframework.data.mapping.model.AnnotationBasedPersistentProperty;
-import org.springframework.data.mapping.model.FieldNamingStrategy;
-import org.springframework.data.mapping.model.MappingException;
-import org.springframework.data.mapping.model.PropertyNameFieldNamingStrategy;
-import org.springframework.data.mapping.model.SimpleTypeHolder;
-import org.springframework.util.StringUtils;
-
 public class BasicAerospikePersistentProperty extends AnnotationBasedPersistentProperty<AerospikePersistentProperty> implements
-AerospikePersistentProperty{
+		AerospikePersistentProperty {
 
 	private static final Logger LOG = LoggerFactory.getLogger(BasicAerospikePersistentProperty.class);
 
@@ -57,13 +53,13 @@ AerospikePersistentProperty{
 	}
 
 	private final FieldNamingStrategy fieldNamingStrategy;
-	
+
 	public BasicAerospikePersistentProperty(Field field,
-			PropertyDescriptor propertyDescriptor,
-			PersistentEntity<?, AerospikePersistentProperty> owner,
-			SimpleTypeHolder simpleTypeHolder, FieldNamingStrategy fieldNamingStrategy) {
+											PropertyDescriptor propertyDescriptor,
+											PersistentEntity<?, AerospikePersistentProperty> owner,
+											SimpleTypeHolder simpleTypeHolder, FieldNamingStrategy fieldNamingStrategy) {
 		super(field, propertyDescriptor, owner, simpleTypeHolder);
-		
+
 		this.fieldNamingStrategy = fieldNamingStrategy == null ? PropertyNameFieldNamingStrategy.INSTANCE
 				: fieldNamingStrategy;
 
@@ -71,9 +67,10 @@ AerospikePersistentProperty{
 			LOG.warn("Customizing field name for id property not allowed! Custom name will not be considered!");
 		}
 	}
+
 	/**
 	 * Also considers fields as id that are of supported id type and name.
-	 * 
+	 *
 	 */
 	@Override
 	public boolean isIdProperty() {
@@ -86,13 +83,15 @@ AerospikePersistentProperty{
 		// but still we need to check if there happens to be an explicit name set
 		return SUPPORTED_ID_PROPERTY_NAMES.contains(getName()) && !hasExplicitFieldName();
 	}
+
 	@Override
 	public boolean isExplicitIdProperty() {
 		return isAnnotationPresent(Id.class);
 	}
+
 	/**
 	 * Returns the key to be used to store the value of the property {@link DBObject}.
-	 * 
+	 *
 	 * @return
 	 */
 	public String getFieldName() {
@@ -125,20 +124,20 @@ AerospikePersistentProperty{
 
 		return fieldName;
 	}
-	
+
 	protected boolean hasExplicitFieldName() {
 		return StringUtils.hasText(getAnnotatedFieldName());
 	}
 
 	private String getAnnotatedFieldName() {
-	
+
 		org.springframework.data.aerospike.mapping.Field annotation = findAnnotation(org.springframework.data.aerospike.mapping.Field.class);
 		if (annotation != null && StringUtils.hasText(annotation.value())) {
 			return annotation.value();
 		}
 		return null;
 	}
-	
+
 	@Override
 	protected Association<AerospikePersistentProperty> createAssociation() {
 		return new Association<AerospikePersistentProperty>(this, null);

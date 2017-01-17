@@ -16,16 +16,20 @@
 package com.aerospike.helper.query;
 
 import com.aerospike.client.Value;
+
 /**
  * Qualifier used to query by generation
- * @author peter
  *
+ * @author peter
  */
 public class GenerationQualifier extends Qualifier {
+
+	private static final long serialVersionUID = 8229654562432677907L;
 
 	public GenerationQualifier(FilterOperation op, Value value) {
 		super(QueryEngine.Meta.GENERATION.toString(), op, value);
 	}
+
 	@Override
 	protected String luaFieldString(String field) {
 		return "generation";

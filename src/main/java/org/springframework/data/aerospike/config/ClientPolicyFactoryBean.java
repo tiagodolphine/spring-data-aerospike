@@ -41,13 +41,14 @@ public class ClientPolicyFactoryBean implements FactoryBean<ClientPolicy> {
 	}
 
 	/**
-	 * Configures the maximum number of worker threads for operation processing.
+	 * Configures the maximum number of connections for operation processing.
 	 * This value is used to size the synchronous connection pool for each server node.
-	 * @param maxThreads
+	 * @param maxConnsPerNode
 	 */
-	public void setMaxThreads(int maxThreads) {
-		this.policy.maxConnsPerNode = maxThreads;
+	public void setMaxConnsPerNode(int maxConnsPerNode) {
+		this.policy.maxConnsPerNode = maxConnsPerNode;
 	}
+
 	/**
 	 * Configures the timeout for a client connection when opening a connection 
 	 * to the server host for the first time.
@@ -149,6 +150,7 @@ public class ClientPolicyFactoryBean implements FactoryBean<ClientPolicy> {
 	public void setUser(String user){
 		this.policy.user = user;
 	}
+
 	/**
 	 * Configures the User password for authentication to cluster.  
 	 * Only used for clusters running with security enabled.
@@ -157,7 +159,8 @@ public class ClientPolicyFactoryBean implements FactoryBean<ClientPolicy> {
 	public void setPassword(String password){
 		this.policy.password = password;
 	}
-	/* 
+
+	/*
 	 * (non-Javadoc)
 	 * @see org.springframework.beans.factory.FactoryBean#getObjectType()
 	 */

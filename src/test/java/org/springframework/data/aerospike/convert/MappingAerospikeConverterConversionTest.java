@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.springframework.data.aerospike.convert;
 
@@ -31,6 +31,7 @@ import org.springframework.beans.ConversionNotSupportedException;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.aerospike.convert.MappingAerospikeConverterTest.ClassWithMapUsingEnumAsKey.FooBarEnum;
 import org.springframework.data.aerospike.mapping.AerospikeMetadataBin;
+import org.springframework.data.aerospike.mapping.AerospikeSimpleTypes;
 import org.springframework.data.aerospike.mapping.Document;
 import org.springframework.data.aerospike.mapping.Field;
 import org.springframework.data.annotation.Id;
@@ -41,35 +42,18 @@ import com.aerospike.client.Bin;
 import com.aerospike.client.Key;
 
 /**
- *
- *
  * @author Peter Milne
  * @author Jean Mercier
- *
  */
 public class MappingAerospikeConverterConversionTest {
 	MappingAerospikeConverter converter;
 	Key key;
-	
-	/**
-	 * 
-	 */
+
 	private static final String AEROSPIKE_KEY = "AerospikeKey";
-	/**
-	 * 
-	 */
-	private static final long AEROSPIKE_KEY_LONG = 100L;
-	/**
-	 * 
-	 */
 	private static final String AEROSPIKE_SET_NAME = "AerospikeSetName";
-	/**
-	 * 
-	 */
 	private static final String AEROSPIKE_NAME_SPACE = "AerospikeNameSpace";
-	
-	private final SimpleTypeHolder simpleTypeHolder = new SimpleTypeHolder();
-	
+
+	private final SimpleTypeHolder simpleTypeHolder = AerospikeSimpleTypes.HOLDER;
 
 	/**
 	 * @throws java.lang.Exception
@@ -77,9 +61,9 @@ public class MappingAerospikeConverterConversionTest {
 	@Before
 	public void setUp() throws Exception {
 		MockitoAnnotations.initMocks(this);
-		
+
 		converter = new MappingAerospikeConverter();
-		key =  new Key(AEROSPIKE_NAME_SPACE, AEROSPIKE_SET_NAME, AEROSPIKE_KEY);
+		key = new Key(AEROSPIKE_NAME_SPACE, AEROSPIKE_SET_NAME, AEROSPIKE_KEY);
 	}
 
 	/**
@@ -89,6 +73,7 @@ public class MappingAerospikeConverterConversionTest {
 	public void tearDown() throws Exception {
 	}
 
+	@SuppressWarnings("unchecked")
 	@Test
 	public void convertsAddressCorrectlyToAerospikeData() {
 		Address address = new Address();
@@ -98,47 +83,48 @@ public class MappingAerospikeConverterConversionTest {
 		AerospikeData dbObject = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		dbObject.setID(AEROSPIKE_KEY);
 		converter.write(address, dbObject);
-		HashMap<String, Object>  map =  (HashMap<String, Object>) AerospikeData.convertToMap(dbObject,simpleTypeHolder);
-		AerospikeData dbObject2 = AerospikeData.convertToAerospikeData(map);
-		Person personReturned = converter.read(Person.class, dbObject2);
 
-		
+		HashMap<String, Object> map = (HashMap<String, Object>) AerospikeData.convertToMap(dbObject, simpleTypeHolder);
+		AerospikeData dbObject2 = AerospikeData.convertToAerospikeData(map);
+		converter.read(Person.class, dbObject2);
+
 		assertTrue(dbObject.getBins().contains(new Bin("city", "New York")));
 		assertTrue(dbObject.getBins().contains(new Bin("street", "Broadway")));
 	}
-	
+
+	@SuppressWarnings("unchecked")
 	public void convertsPersonAddressCorrectlyToAerospikeData() {
 		Address address = new Address();
 		address.city = "New York";
 		address.street = "Broadway";
-		
 
 		AerospikeData dbObject = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		dbObject.setID(AEROSPIKE_KEY);
 		converter.write(address, dbObject);
-		HashMap<String, Object>  map =  (HashMap<String, Object>) AerospikeData.convertToMap(dbObject,simpleTypeHolder);
-		AerospikeData dbObject2 = AerospikeData.convertToAerospikeData(map);
-		Person personReturned = converter.read(Person.class, dbObject2);
 
-		
+		HashMap<String, Object> map = (HashMap<String, Object>) AerospikeData.convertToMap(dbObject, simpleTypeHolder);
+		AerospikeData dbObject2 = AerospikeData.convertToAerospikeData(map);
+		converter.read(Person.class, dbObject2);
+
 		assertTrue(dbObject.getBins().contains(new Bin("city", "New York")));
 		assertTrue(dbObject.getBins().contains(new Bin("street", "Broadway")));
 	}
-	
+
 	/**
 	 * @param dbObject
 	 * @param string
 	 * @return
 	 */
+	@SuppressWarnings("unchecked")
 	private Object returnBinPropertyValue(AerospikeData aerospikeData, String property) {
-		if (aerospikeData.getBins() == null || aerospikeData.getBins().size()  == 0)
+		if (aerospikeData.getBins() == null || aerospikeData.getBins().size() == 0)
 			return null;
-		for (Iterator<Bin> iterator = aerospikeData.getBins().iterator(); iterator.hasNext();) {
+		for (Iterator<Bin> iterator = aerospikeData.getBins().iterator(); iterator.hasNext(); ) {
 			Bin bin = (Bin) iterator.next();
-			if(bin.name.equals(AerospikeMetadataBin.AEROSPIKE_META_DATA)){
+			if (bin.name.equals(AerospikeMetadataBin.AEROSPIKE_META_DATA)) {
 				HashMap<String, Object> map = (HashMap<String, Object>) bin.value.getObject();
 				for (Map.Entry<String, Object> entry : map.entrySet()) {
-					if(entry.getKey().equals(property)){
+					if (entry.getKey().equals(property)) {
 						return entry.getValue();
 					}
 				}
@@ -148,42 +134,39 @@ public class MappingAerospikeConverterConversionTest {
 		}
 		return null;
 	}
-	
-	
+
+	@SuppressWarnings("unchecked")
 	@Test
 	public void resolvesNestedComplexTypeForWriteCorrectly() {
-		
 		Address address = new Address();
 		address.city = "London";
-		address.street =  "110 Southwark Street";
+		address.street = "110 Southwark Street";
 		Address address2 = new Address();
 		address2.city = "Toronto";
-		address2.street =  "110 West Side Street";
-		
+		address2.street = "110 West Side Street";
+
 		Set<Address> addresses = new HashSet<Address>();
 		addresses.add(address);
 		addresses.add(address2);
 		Person person = new Person(addresses);
-		
+
 		AerospikeData dbObject = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		dbObject.setID(AEROSPIKE_KEY);
 		converter.write(person, dbObject);
-		HashMap<String, Object>  map =  (HashMap<String, Object>) AerospikeData.convertToMap(dbObject,simpleTypeHolder);
+
+		HashMap<String, Object> map = (HashMap<String, Object>) AerospikeData.convertToMap(dbObject, simpleTypeHolder);
 		AerospikeData dbObject2 = AerospikeData.convertToAerospikeData(map);
 		Person personReturned = converter.read(Person.class, dbObject2);
-		assertThat(personReturned.getAddresses().size(),Matchers.is(2));
-		
-		Object object = returnBinPropertyValue(dbObject,"addresses");
-		
+		assertThat(personReturned.getAddresses().size(), Matchers.is(2));
+
+		returnBinPropertyValue(dbObject, "addresses");
 	}
 
-	
 	static class GenericType<T> {
 		T content;
 	}
 
 	static class ClassWithEnumProperty {
-
 		SampleEnum sampleEnum;
 		List<SampleEnum> enums;
 		EnumSet<SampleEnum> enumSet;
@@ -193,7 +176,8 @@ public class MappingAerospikeConverterConversionTest {
 	static enum SampleEnum {
 		FIRST {
 			@Override
-			void method() {}
+			void method() {
+			}
 		},
 		SECOND {
 			@Override
@@ -212,10 +196,12 @@ public class MappingAerospikeConverterConversionTest {
 	static class Address implements InterfaceType {
 		String street;
 		String city;
+
 		@Override
 		public String toString() {
 			return "Address [street=" + street + ", city=" + city + "]";
 		}
+
 		@Override
 		public int hashCode() {
 			final int prime = 31;
@@ -225,6 +211,7 @@ public class MappingAerospikeConverterConversionTest {
 					+ ((street == null) ? 0 : street.hashCode());
 			return result;
 		}
+
 		@Override
 		public boolean equals(Object obj) {
 			if (this == obj)
@@ -253,12 +240,13 @@ public class MappingAerospikeConverterConversionTest {
 	}
 
 	static class Person implements Contact {
-
-		@Id String id;
+		@Id
+		String id;
 
 		Date birthDate;
 
-		@Field("foo") String firstname;
+		@Field("foo")
+		String firstname;
 		String lastname;
 
 		Set<Address> addresses;
@@ -319,36 +307,31 @@ public class MappingAerospikeConverterConversionTest {
 			if (addresses == null) {
 				if (other.addresses != null)
 					return false;
-			}
-			else if (!addresses.equals(other.addresses))
+			} else if (!addresses.equals(other.addresses))
 				return false;
 			if (birthDate == null) {
 				if (other.birthDate != null)
 					return false;
-			}
-			else if (!birthDate.equals(other.birthDate))
+			} else if (!birthDate.equals(other.birthDate))
 				return false;
 			if (firstname == null) {
 				if (other.firstname != null)
 					return false;
-			}
-			else if (!firstname.equals(other.firstname))
+			} else if (!firstname.equals(other.firstname))
 				return false;
 			if (id == null) {
 				if (other.id != null)
 					return false;
-			}
-			else if (!id.equals(other.id))
+			} else if (!id.equals(other.id))
 				return false;
 			if (lastname == null) {
 				if (other.lastname != null)
 					return false;
-			}
-			else if (!lastname.equals(other.lastname))
+			} else if (!lastname.equals(other.lastname))
 				return false;
 			return true;
 		}
-		
+
 	}
 
 	static class ClassWithSortedMap {
@@ -390,7 +373,8 @@ public class MappingAerospikeConverterConversionTest {
 	}
 
 	static class ClassWithBigIntegerId {
-		@Id BigInteger id;
+		@Id
+		BigInteger id;
 	}
 
 	static class A<T> {
@@ -406,7 +390,8 @@ public class MappingAerospikeConverterConversionTest {
 
 	static class ClassWithIntId {
 
-		@Id int id;
+		@Id
+		int id;
 	}
 
 	static class DefaultedConstructorArgument {
@@ -446,7 +431,8 @@ public class MappingAerospikeConverterConversionTest {
 
 	static class ClassWithComplexId {
 
-		@Id ComplexId complexId;
+		@Id
+		ComplexId complexId;
 	}
 
 	static class ComplexId {
@@ -468,16 +454,15 @@ public class MappingAerospikeConverterConversionTest {
 	}
 
 	static class ThrowableWrapper {
-
 		Throwable throwable;
 	}
 
 	@Document
 	static class PrimitiveContainer {
+		@Field("property")
+		private final int m_property;
 
-		@Field("property") private final int m_property;
-
-		public PrimitiveContainer( int a_property) {
+		public PrimitiveContainer(int a_property) {
 			m_property = a_property;
 		}
 
@@ -488,8 +473,8 @@ public class MappingAerospikeConverterConversionTest {
 
 	@Document
 	static class ObjectContainer {
-
-		@Field("property") private final PrimitiveContainer m_property;
+		@Field("property")
+		private final PrimitiveContainer m_property;
 
 		public ObjectContainer(PrimitiveContainer a_property) {
 			m_property = a_property;
@@ -500,38 +485,33 @@ public class MappingAerospikeConverterConversionTest {
 		}
 	}
 
-
-
 	static class RootForClassWithExplicitlyRenamedIdField {
-
-		@Id String id;
+		@Id
+		String id;
 		ClassWithExplicitlyRenamedField nested;
 	}
 
 	static class ClassWithExplicitlyRenamedField {
-
-		@Field("id") String id;
+		@Field("id")
+		String id;
 	}
 
 	static class RootForClassWithNamedIdField {
-
 		String id;
 		ClassWithNamedIdField nested;
 	}
 
 	static class ClassWithNamedIdField {
-
 		String id;
 	}
 
 	static class ClassWithAnnotatedIdField {
-
-		@Id String key;
+		@Id
+		String key;
 	}
 
 
 	static class ClassWithMapUsingEnumAsKey {
-
 		static enum FooBarEnum {
 			FOO, BAR;
 		}
@@ -540,7 +520,6 @@ public class MappingAerospikeConverterConversionTest {
 	}
 
 	static class FooBarEnumToStringConverter implements Converter<FooBarEnum, String> {
-
 		@Override
 		public String convert(FooBarEnum source) {
 
@@ -553,7 +532,6 @@ public class MappingAerospikeConverterConversionTest {
 	}
 
 	static class StringToFooNumConverter implements Converter<String, FooBarEnum> {
-
 		@Override
 		public FooBarEnum convert(String source) {
 

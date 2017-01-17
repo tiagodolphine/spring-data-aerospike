@@ -1,40 +1,16 @@
 /**
- * 
+ *
  */
 package org.springframework.data.aerospike.convert;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.beans.HasProperty;
@@ -47,11 +23,7 @@ import org.springframework.beans.ConversionNotSupportedException;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.data.aerospike.convert.MappingAerospikeConverterTest.ClassWithMapUsingEnumAsKey.FooBarEnum;
-import org.springframework.data.aerospike.mapping.AerospikeMappingContext;
-import org.springframework.data.aerospike.mapping.AerospikeMetadataBin;
-import org.springframework.data.aerospike.mapping.Document;
-import org.springframework.data.aerospike.mapping.Field;
-import org.springframework.data.aerospike.mapping.PersonPojoStringId;
+import org.springframework.data.aerospike.mapping.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.TypeAlias;
 
@@ -60,44 +32,28 @@ import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 
 /**
- *
- *
  * @author Peter Milne
  * @author Jean Mercier
- *
  */
 public class MappingAerospikeConverterTest {
-	
+
 	MappingAerospikeConverter converter;
 	Key key;
-	
-	/**
-	 * 
-	 */
+
 	private static final String AEROSPIKE_KEY = "AerospikeKey";
-	/**
-	 * 
-	 */
-	private static final long AEROSPIKE_KEY_LONG = 100L;
-	/**
-	 * 
-	 */
 	private static final String AEROSPIKE_SET_NAME = "AerospikeSetName";
-	/**
-	 * 
-	 */
 	private static final String AEROSPIKE_NAME_SPACE = "AerospikeNameSpace";
 
 	/**
 	 * @throws java.lang.Exception
 	 */
-	
+
 	@Before
 	public void setUp() throws Exception {
 		MockitoAnnotations.initMocks(this);
-		
+
 		converter = new MappingAerospikeConverter();
-		key =  new Key(AEROSPIKE_NAME_SPACE, AEROSPIKE_SET_NAME, AEROSPIKE_KEY);
+		key = new Key(AEROSPIKE_NAME_SPACE, AEROSPIKE_SET_NAME, AEROSPIKE_KEY);
 	}
 
 	/**
@@ -113,8 +69,8 @@ public class MappingAerospikeConverterTest {
 	@Test
 	public void testMappingAerospikeConverter() {
 		MappingAerospikeConverter mappingAerospikeConverter = new MappingAerospikeConverter();
-		assertNotNull( mappingAerospikeConverter.getMappingContext());
-		assertNotNull( mappingAerospikeConverter.getConversionService());
+		assertNotNull(mappingAerospikeConverter.getMappingContext());
+		assertNotNull(mappingAerospikeConverter.getConversionService());
 	}
 
 	/**
@@ -123,7 +79,7 @@ public class MappingAerospikeConverterTest {
 	@Test
 	public void testGetMappingContext() {
 		MappingAerospikeConverter mappingAerospikeConverter = new MappingAerospikeConverter();
-		assertNotNull( mappingAerospikeConverter.getMappingContext());
+		assertNotNull(mappingAerospikeConverter.getMappingContext());
 		assertTrue(mappingAerospikeConverter.getMappingContext() instanceof AerospikeMappingContext);
 	}
 
@@ -133,9 +89,8 @@ public class MappingAerospikeConverterTest {
 	@Test
 	public void testGetConversionService() {
 		MappingAerospikeConverter mappingAerospikeConverter = new MappingAerospikeConverter();
-		assertNotNull( mappingAerospikeConverter.getConversionService());
+		assertNotNull(mappingAerospikeConverter.getConversionService());
 		assertTrue(mappingAerospikeConverter.getConversionService() instanceof DefaultConversionService);
-
 	}
 
 	/**
@@ -143,7 +98,6 @@ public class MappingAerospikeConverterTest {
 	 */
 	@Test
 	public void convertsAddressCorrectlyToAerospikeData() {
-
 		Address address = new Address();
 		address.city = "New York";
 		address.street = "Broadway";
@@ -151,18 +105,18 @@ public class MappingAerospikeConverterTest {
 		AerospikeData dbObject = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		dbObject.setID(AEROSPIKE_KEY);
 		converter.write(address, dbObject);
-		
+
 		assertTrue(dbObject.getBins().contains(new Bin("city", "New York")));
 		assertTrue(dbObject.getBins().contains(new Bin("street", "Broadway")));
 	}
-	
+
+	@SuppressWarnings("serial")
 	@Test
 	public void convertsAerospikeDataToAddressCorrectly() {
-
 		Address address = new Address();
 		address.city = "New York";
 		address.street = "Broadway";
-		
+
 		Map<String, Object> bins = new HashMap<String, Object>() {
 			{
 				put("city", "New York");
@@ -171,28 +125,25 @@ public class MappingAerospikeConverterTest {
 		};
 		Record record = new Record(bins, 1, 1);
 
-
-		AerospikeData dbObject = AerospikeData.forRead(key, null );
+		AerospikeData dbObject = AerospikeData.forRead(key, null);
 		dbObject.setRecord(record);
-		
+
 		Address convertedAddress = converter.read(Address.class, dbObject);
 		assertThat(convertedAddress, SamePropertyValuesAs.samePropertyValuesAs(address));
-		
 	}
+
 	@Test
 	public void convertsDateTypesCorrectly() {
-
-
 		Person person = new Person();
 		person.birthDate = new Date();
 
 		AerospikeData dbObject = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		dbObject.setID(AEROSPIKE_KEY);
 		converter.write(person, dbObject);
-		
-		Object object = returnBinPropertyValue(dbObject,"birthDate");
-		
-		assertThat(returnBinPropertyValue(dbObject,"birthDate"), is(instanceOf(Date.class)));
+
+		returnBinPropertyValue(dbObject, "birthDate");
+
+		assertThat(returnBinPropertyValue(dbObject, "birthDate"), is(instanceOf(Date.class)));
 		Record record = new Record(listToMap(dbObject.getBins()), 1, 1);
 		dbObject.setRecord(record);
 
@@ -200,13 +151,12 @@ public class MappingAerospikeConverterTest {
 		assertThat(result.birthDate, is(notNullValue()));
 	}
 
-
 	/**
 	 * Test method for {@link org.springframework.data.aerospike.convert.MappingAerospikeConverter#write(java.lang.Object, org.springframework.data.aerospike.convert.AerospikeData)}.
 	 */
+	@SuppressWarnings("unchecked")
 	@Test
 	public void writesMapTypeCorrectly() {
-		
 		ClassWithMapProperty foo = new ClassWithMapProperty();
 
 		foo.map = Collections.singletonMap(Locale.US, "Biff");
@@ -214,18 +164,17 @@ public class MappingAerospikeConverterTest {
 		AerospikeData dbObject = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		dbObject.setID(AEROSPIKE_KEY);
 		converter.write(foo, dbObject);
-		
-		Object object = returnBinPropertyValue(dbObject,"map");
-		assertThat((Map<Locale, String>)object,hasEntry(Locale.US, "Biff"));
 
+		Object object = returnBinPropertyValue(dbObject, "map");
+		assertThat((Map<Locale, String>) object, hasEntry(Locale.US, "Biff"));
 	}
-	
+
 	/**
 	 * Test method for {@link org.springframework.data.aerospike.convert.MappingAerospikeConverter#write(java.lang.Object, org.springframework.data.aerospike.convert.AerospikeData)}.
 	 */
+	@SuppressWarnings("unchecked")
 	@Test
 	public void writesNullValuesForMapsCorrectly() {
-		
 		ClassWithMapProperty foo = new ClassWithMapProperty();
 
 		foo.map = Collections.singletonMap(Locale.US, null);
@@ -233,45 +182,43 @@ public class MappingAerospikeConverterTest {
 		AerospikeData dbObject = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		dbObject.setID(AEROSPIKE_KEY);
 		converter.write(foo, dbObject);
-		
-		Object object = returnBinPropertyValue(dbObject,"map");
-		assertThat((Map<Locale, String>)object,hasEntry(Locale.US, null));
 
+		Object object = returnBinPropertyValue(dbObject, "map");
+		assertThat((Map<Locale, String>) object, hasEntry(Locale.US, null));
 	}
-	
+
 	@Test
 	public void writesEnumsCorrectly() {
-
 		ClassWithEnumProperty value = new ClassWithEnumProperty();
 		value.sampleEnum = SampleEnum.FIRST;
-		
+
 		AerospikeData result = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		result.setID(AEROSPIKE_KEY);
 		converter.write(value, result);
-		
-		Object object = returnBinPropertyValue(result,"sampleEnum");
 
-		assertThat(object, is(instanceOf(Enum.class)));
-		assertThat(object.toString(), is("FIRST"));
-		assertThat((SampleEnum)object, is(SampleEnum.FIRST));
+		Object object = returnBinPropertyValue(result, "sampleEnum");
+		//all Enums are saved in form of String in the DB
+		assertThat(object, is(instanceOf(String.class)));
+		assertThat(SampleEnum.valueOf(object.toString()), is(SampleEnum.FIRST));
 	}
-	
+
+	@SuppressWarnings("rawtypes")
 	@Test
 	public void writesEnumCollectionCorrectly() {
-
 		ClassWithEnumProperty value = new ClassWithEnumProperty();
 		value.enums = Arrays.asList(SampleEnum.FIRST);
-		
+
 		AerospikeData result = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		result.setID(AEROSPIKE_KEY);
 		converter.write(value, result);
-		
-		Object object = returnBinPropertyValue(result,"enums");
 
-		assertThat(((List)object).size(), is(1));
-		assertThat((String) ((List)object).get(0).toString(), is("FIRST"));
+		Object object = returnBinPropertyValue(result, "enums");
+
+		assertThat(((List) object).size(), is(1));
+		assertThat((String) ((List) object).get(0).toString(), is("FIRST"));
 	}
-	
+
+	@SuppressWarnings("serial")
 	@Test
 	public void readsEnumsCorrectly() {
 		Map<String, Object> bins = new HashMap<String, Object>() {
@@ -281,26 +228,26 @@ public class MappingAerospikeConverterTest {
 		};
 		Record record = new Record(bins, 1, 1);
 
-		AerospikeData dbObject = AerospikeData.forRead(key, null );
+		AerospikeData dbObject = AerospikeData.forRead(key, null);
 		dbObject.setRecord(record);
-		
+
 		ClassWithEnumProperty result = converter.read(ClassWithEnumProperty.class, dbObject);
 
 		assertThat(result.sampleEnum, is(SampleEnum.FIRST));
 	}
-	
+
+	@SuppressWarnings("serial")
 	@Test
 	public void readsEnumCollectionsCorrectly() {
-		
 		Map<String, Object> bins = new HashMap<String, Object>() {
 			{
 				put("sampleEnum", SampleEnum.FIRST);
-				put("enums",  Arrays.asList(SampleEnum.FIRST));
+				put("enums", Arrays.asList(SampleEnum.FIRST));
 			}
 		};
 		Record record = new Record(bins, 1, 1);
 
-		AerospikeData dbObject = AerospikeData.forRead(key, null );
+		AerospikeData dbObject = AerospikeData.forRead(key, null);
 		dbObject.setRecord(record);
 
 		ClassWithEnumProperty result = converter.read(ClassWithEnumProperty.class, dbObject);
@@ -312,145 +259,135 @@ public class MappingAerospikeConverterTest {
 
 	@Test
 	public void considersFieldNameAnnotationWhenWriting() {
-
 		Person person = new Person();
 		person.firstname = "Oliver";
-		
+
 		AerospikeData dbObject = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		dbObject.setID(AEROSPIKE_KEY);
 		converter.write(person, dbObject);
 
 
-		Object foo = returnBinPropertyValue(dbObject,"foo");
-		Object firstName = returnBinPropertyValue(dbObject,"firstName");
+		Object foo = returnBinPropertyValue(dbObject, "foo");
+		Object firstName = returnBinPropertyValue(dbObject, "firstName");
 
-		MatcherAssert.assertThat((String)foo, is(equalTo("Oliver")));
+		MatcherAssert.assertThat((String) foo, is(equalTo("Oliver")));
 		assertNull(firstName);
 	}
-	
+
+	@SuppressWarnings("serial")
 	@Test
 	public void considersFieldNameAnnotationWhenReading() {
-
 		Map<String, Object> bins = new HashMap<String, Object>() {
 			{
 				put("id", "id1");
-				put("birthDate",  null);
-				put("foo","Oliver");
+				put("birthDate", null);
+				put("foo", "Oliver");
 			}
 		};
 		Record record = new Record(bins, 1, 1);
 
-		AerospikeData dbObject = AerospikeData.forRead(key, null );
+		AerospikeData dbObject = AerospikeData.forRead(key, null);
 		dbObject.setRecord(record);
 
 		Person result = converter.read(Person.class, dbObject);
-		
-		
 
-		assertThat(result.firstname, is("Oliver") );
-		assertThat(result,not(HasProperty.hasProperty("foo")));
+		assertThat(result.firstname, is("Oliver"));
+		assertThat(result, not(HasProperty.hasProperty("foo")));
 	}
 
+	@SuppressWarnings({"rawtypes", "unchecked"})
 	@Test
 	public void resolvesNestedComplexTypeForWriteCorrectly() {
-		
 		Address address = new Address();
 		address.city = "London";
-		address.street =  "110 Southwark Street";
-		
+		address.street = "110 Southwark Street";
+
 		Set<Address> addresses = new HashSet<MappingAerospikeConverterTest.Address>();
 		addresses.add(address);
 		Person person = new Person(addresses);
-		
+
 		AerospikeData dbObject = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		dbObject.setID(AEROSPIKE_KEY);
 		converter.write(person, dbObject);
-		
-		List<Object> list = (List<Object>) returnBinPropertyValue(dbObject,"addresses");
-		
+
+		List<Object> list = (List<Object>) returnBinPropertyValue(dbObject, "addresses");
+
 		HashMap hashMap = (HashMap) list.get(0);
 		String city = (String) hashMap.get("city");
-		assertThat(city, is("London") );
-		
-		
-		
+		assertThat(city, is("London"));
 	}
 
+	@SuppressWarnings("serial")
 	@Test
 	public void resolvesNestedComplexTypeForReadCorrectly() {
-		
 		final Address address = new Address();
 		address.city = "London";
-		address.street =  "110 Southwark Street";
+		address.street = "110 Southwark Street";
 
-		
 		Map<String, Object> bins = new HashMap<String, Object>() {
 			{
 				put("id", "id1");
-				put("birthDate",  new Date());
-				put("foo","Oliver");
-				put("lastname","Cromwell");
-				put("addresses",address);
+				put("birthDate", new Date());
+				put("foo", "Oliver");
+				put("lastname", "Cromwell");
+				put("addresses", address);
 			}
 		};
 		Record record = new Record(bins, 1, 1);
 
-		AerospikeData dbObject = AerospikeData.forRead(key, null );
+		AerospikeData dbObject = AerospikeData.forRead(key, null);
 		dbObject.setRecord(record);
 
 		Person result = converter.read(Person.class, dbObject);
-		
+
 		assertThat(result.addresses, is(notNullValue()));
 	}
 
+	@SuppressWarnings("unchecked")
 	@Test
 	public void writesClassWithBigDecimal() {
 
 		BigDecimalContainer container = new BigDecimalContainer();
 		container.value = BigDecimal.valueOf(2.5d);
 		container.map = Collections.singletonMap("foo", container.value);
-		
+
 		AerospikeData dbObject = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		dbObject.setID(AEROSPIKE_KEY);
 		converter.write(container, dbObject);
 
-		Object objectValue = returnBinPropertyValue(dbObject,"value");
-		Object objectMap = returnBinPropertyValue(dbObject,"map");
+		returnBinPropertyValue(dbObject, "value");
+		Object objectMap = returnBinPropertyValue(dbObject, "map");
 
-		assertThat(((Map<String, BigDecimal>)objectMap).get("foo"), is(instanceOf(BigDecimal.class)));
+		assertThat(((Map<String, BigDecimal>) objectMap).get("foo"), is(instanceOf(BigDecimal.class)));
 	}
-	
+
+	@SuppressWarnings("serial")
 	@Test
 	public void readClassWithBigDecimal() {
-		
 		Map<String, Object> bins = new HashMap<String, Object>() {
 			{
 				put("value", BigDecimal.valueOf(2.5d));
 				put("map", Collections.singletonMap("foo", BigDecimal.valueOf(2.5d)));
-				put("collection", Arrays.asList(BigDecimal.valueOf(2.5d),BigDecimal.valueOf(12.5d), BigDecimal.valueOf(22.5d)));
+				put("collection", Arrays.asList(BigDecimal.valueOf(2.5d), BigDecimal.valueOf(12.5d), BigDecimal.valueOf(22.5d)));
 			}
 		};
 		Record record = new Record(bins, 1, 1);
 
-		AerospikeData dbObject = AerospikeData.forRead(key, null );
+		AerospikeData dbObject = AerospikeData.forRead(key, null);
 		dbObject.setRecord(record);
 
 		BigDecimalContainer result = converter.read(BigDecimalContainer.class, dbObject);
-		
 
 		assertThat(result.value, is(BigDecimal.valueOf(2.5d)));
 		assertThat(result.map.get("foo"), is(BigDecimal.valueOf(2.5d)));
 		assertThat(result.collection.get(0), is(BigDecimal.valueOf(2.5d)));
 	}
-	
-	
-	
+
 	@Test
 	public void readsEmptySetsCorrectly() {
-
 		Person person = new Person();
 		person.addresses = Collections.emptySet();
-		
+
 		AerospikeData dbObject = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		dbObject.setID(AEROSPIKE_KEY);
 
@@ -458,11 +395,10 @@ public class MappingAerospikeConverterTest {
 		Record record = new Record(listToMap(dbObject.getBins()), 1, 1);
 		dbObject.setRecord(record);
 		Person result = converter.read(Person.class, dbObject);
-		
+
 		assertThat(result.addresses, hasSize(0));
 	}
-	
-	
+
 	@Test
 	public void convertsObjectIdStringsToObjectIdCorrectly() {
 		PersonPojoStringId p1 = new PersonPojoStringId("1234567890", "Text-1");
@@ -470,28 +406,26 @@ public class MappingAerospikeConverterTest {
 		dbObject.setID(AEROSPIKE_KEY);
 
 		converter.write(p1, dbObject);
-		assertThat(returnBinPropertyValue(dbObject,MappingAerospikeConverter.SPRING_ID_BIN), is(instanceOf(String.class)));
-		
-
+		assertThat(returnBinPropertyValue(dbObject, MappingAerospikeConverter.SPRING_ID_BIN), is(instanceOf(String.class)));
 	}
-	
+
+	@SuppressWarnings("serial")
 	@Test
 	public void convertsCustomEmptyMapCorrectly() {
-
 		final Map<String, Object> map = new HashMap<String, Object>() {
 			{
 				put("city", "New York");
 				put("street", "Broadway");
 			}
 		};
-		
+
 		Map<String, Object> bins = new HashMap<String, Object>() {
 			{
 				put("map", map);
 			}
 		};
 		Record record = new Record(bins, 1, 1);
-		AerospikeData dbObject = AerospikeData.forRead(key, null );
+		AerospikeData dbObject = AerospikeData.forRead(key, null);
 		dbObject.setRecord(record);
 
 		ClassWithSortedMap result = converter.read(ClassWithSortedMap.class, dbObject);
@@ -499,16 +433,14 @@ public class MappingAerospikeConverterTest {
 		assertThat(result, is(instanceOf(ClassWithSortedMap.class)));
 		assertThat(result.map, is(instanceOf(Map.class)));
 	}
-	
+
 	@Test
 	public void maybeConvertHandlesNullValuesCorrectly() {
 		assertThat(converter.convertToAerospikeType(null), is(nullValue()));
 	}
-	
-	
+
 	@Test
 	public void writesIntIdCorrectly() {
-
 		ClassWithIntId value = new ClassWithIntId();
 		value.id = 5;
 
@@ -516,32 +448,31 @@ public class MappingAerospikeConverterTest {
 		result.setID(AEROSPIKE_KEY);
 
 		converter.write(value, result);
-		
-		Object objectValue = returnBinPropertyValue(result,"_id");
-		Object objectSpringValue = returnBinPropertyValue(result,MappingAerospikeConverter.SPRING_ID_BIN);
+
+		returnBinPropertyValue(result, "_id");
+		Object objectSpringValue = returnBinPropertyValue(result, MappingAerospikeConverter.SPRING_ID_BIN);
 
 		assertThat(objectSpringValue, is((Object) 5));
 	}
 
-	@Test
 	@SuppressWarnings("unchecked")
+	@Test
 	public void writesNullValuesForCollection() {
-
 		CollectionWrapper wrapper = new CollectionWrapper();
-		wrapper.contacts = Arrays.<Contact> asList(new Person(), null);
+		wrapper.contacts = Arrays.<Contact>asList(new Person(), null);
 
 		AerospikeData result = AerospikeData.forWrite(AEROSPIKE_NAME_SPACE);
 		result.setID(AEROSPIKE_KEY);
 
 		converter.write(wrapper, result);
 
-		List<Object> contacts = (List<Object>) returnBinPropertyValue(result,"contacts");
+		List<Object> contacts = (List<Object>) returnBinPropertyValue(result, "contacts");
 		assertThat(contacts, is(instanceOf(Collection.class)));
-		assertThat(((Collection<?>) contacts).size(), is(1));
-		HashMap contactItem = (HashMap) contacts.get(0);
-		assertThat(contactItem.get("address"), nullValue());
+		assertThat(((Collection<?>) contacts).size(), is(2));
+		Person contactItem = (Person) contacts.get(0);
+
+		assertThat(contactItem.addresses, nullValue());
 	}
-	
 
 
 	/**
@@ -549,27 +480,29 @@ public class MappingAerospikeConverterTest {
 	 * @return
 	 */
 	private Map<String, Object> listToMap(List<Bin> bins) {
-		Map<String,Object> map = new HashMap<String,Object>();
-		if (bins != null && bins.size()  > 0){
-			for (Bin bin : bins) map.put(bin.name,bin.value.getObject());
-		}		
+		Map<String, Object> map = new HashMap<String, Object>();
+		if (bins != null && bins.size() > 0) {
+			for (Bin bin : bins) map.put(bin.name, bin.value.getObject());
+		}
 		return map;
 	}
 
 	/**
-	 * @param dbObject
-	 * @param string
+	 * @param aerospikeData
+	 * @param property
 	 * @return
 	 */
+	@SuppressWarnings("unchecked")
 	private Object returnBinPropertyValue(AerospikeData aerospikeData, String property) {
-		if (aerospikeData.getBins() == null || aerospikeData.getBins().size()  == 0)
+		if (aerospikeData.getBins() == null || aerospikeData.getBins().size() == 0)
 			return null;
-		for (Iterator<Bin> iterator = aerospikeData.getBins().iterator(); iterator.hasNext();) {
+		for (Iterator<Bin> iterator = aerospikeData.getBins().iterator(); iterator.hasNext(); ) {
 			Bin bin = (Bin) iterator.next();
-			if(bin.name.equals(AerospikeMetadataBin.AEROSPIKE_META_DATA)){
+
+			if (bin.name.equals(AerospikeMetadataBin.AEROSPIKE_META_DATA)) {
 				HashMap<String, Object> map = (HashMap<String, Object>) bin.value.getObject();
 				for (Map.Entry<String, Object> entry : map.entrySet()) {
-					if(entry.getKey().equals(property)){
+					if (entry.getKey().equals(property)) {
 						return entry.getValue();
 					}
 				}
@@ -579,7 +512,7 @@ public class MappingAerospikeConverterTest {
 		}
 		return null;
 	}
-	
+
 	static class GenericType<T> {
 		T content;
 	}
@@ -595,7 +528,8 @@ public class MappingAerospikeConverterTest {
 	static enum SampleEnum {
 		FIRST {
 			@Override
-			void method() {}
+			void method() {
+			}
 		},
 		SECOND {
 			@Override
@@ -614,10 +548,12 @@ public class MappingAerospikeConverterTest {
 	static class Address implements InterfaceType {
 		String street;
 		String city;
+
 		@Override
 		public String toString() {
 			return "Address [street=" + street + ", city=" + city + "]";
 		}
+
 		@Override
 		public int hashCode() {
 			final int prime = 31;
@@ -627,6 +563,7 @@ public class MappingAerospikeConverterTest {
 					+ ((street == null) ? 0 : street.hashCode());
 			return result;
 		}
+
 		@Override
 		public boolean equals(Object obj) {
 			if (this == obj)
@@ -655,12 +592,13 @@ public class MappingAerospikeConverterTest {
 	}
 
 	static class Person implements Contact {
-
-		@Id String id;
+		@Id
+		String id;
 
 		Date birthDate;
 
-		@Field("foo") String firstname;
+		@Field("foo")
+		String firstname;
 		String lastname;
 
 		Set<Address> addresses;
@@ -713,11 +651,11 @@ public class MappingAerospikeConverterTest {
 	}
 
 	static class ClassWithBigIntegerId {
-		@Id BigInteger id;
+		@Id
+		BigInteger id;
 	}
 
 	static class A<T> {
-
 		String valueType;
 		T value;
 
@@ -728,12 +666,11 @@ public class MappingAerospikeConverterTest {
 	}
 
 	static class ClassWithIntId {
-
-		@Id int id;
+		@Id
+		int id;
 	}
 
 	static class DefaultedConstructorArgument {
-
 		String foo;
 		int bar;
 		double foobar;
@@ -755,7 +692,6 @@ public class MappingAerospikeConverterTest {
 	}
 
 	static class Outer {
-
 		class Inner {
 			String value;
 		}
@@ -768,8 +704,8 @@ public class MappingAerospikeConverterTest {
 	}
 
 	static class ClassWithComplexId {
-
-		@Id ComplexId complexId;
+		@Id
+		ComplexId complexId;
 	}
 
 	static class ComplexId {
@@ -777,7 +713,6 @@ public class MappingAerospikeConverterTest {
 	}
 
 	static class TypWithCollectionConstructor {
-
 		List<Attribute> attributes;
 
 		public TypWithCollectionConstructor(List<Attribute> attributes) {
@@ -791,16 +726,15 @@ public class MappingAerospikeConverterTest {
 	}
 
 	static class ThrowableWrapper {
-
 		Throwable throwable;
 	}
 
 	@Document
 	static class PrimitiveContainer {
+		@Field("property")
+		private final int m_property;
 
-		@Field("property") private final int m_property;
-
-		public PrimitiveContainer( int a_property) {
+		public PrimitiveContainer(int a_property) {
 			m_property = a_property;
 		}
 
@@ -811,8 +745,8 @@ public class MappingAerospikeConverterTest {
 
 	@Document
 	static class ObjectContainer {
-
-		@Field("property") private final PrimitiveContainer m_property;
+		@Field("property")
+		private final PrimitiveContainer m_property;
 
 		public ObjectContainer(PrimitiveContainer a_property) {
 			m_property = a_property;
@@ -823,38 +757,32 @@ public class MappingAerospikeConverterTest {
 		}
 	}
 
-
-
 	static class RootForClassWithExplicitlyRenamedIdField {
-
-		@Id String id;
+		@Id
+		String id;
 		ClassWithExplicitlyRenamedField nested;
 	}
 
 	static class ClassWithExplicitlyRenamedField {
-
-		@Field("id") String id;
+		@Field("id")
+		String id;
 	}
 
 	static class RootForClassWithNamedIdField {
-
 		String id;
 		ClassWithNamedIdField nested;
 	}
 
 	static class ClassWithNamedIdField {
-
 		String id;
 	}
 
 	static class ClassWithAnnotatedIdField {
-
-		@Id String key;
+		@Id
+		String key;
 	}
 
-
 	static class ClassWithMapUsingEnumAsKey {
-
 		static enum FooBarEnum {
 			FOO, BAR;
 		}
@@ -863,7 +791,6 @@ public class MappingAerospikeConverterTest {
 	}
 
 	static class FooBarEnumToStringConverter implements Converter<FooBarEnum, String> {
-
 		@Override
 		public String convert(FooBarEnum source) {
 
@@ -876,7 +803,6 @@ public class MappingAerospikeConverterTest {
 	}
 
 	static class StringToFooNumConverter implements Converter<String, FooBarEnum> {
-
 		@Override
 		public FooBarEnum convert(String source) {
 

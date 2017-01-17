@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.springframework.data.keyvalue.repository.query;
 
@@ -25,38 +25,32 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 /**
- *
- *
  * @author Peter Milne
  * @author Jean Mercier
- *
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = TestConfig.class)
 public class AerospikeQueryCreatorUnitTests {
-	
+
 	MappingContext<?, AerospikePersistentProperty> context;
 	Method findByFirstname, findByFirstnameAndFriend, findByFirstnameNotNull;
-	@Mock AerospikeConverter converter;
-	
-	   @Before
-	    public void setUp() {
-	        MockitoAnnotations.initMocks(this);
-	        context = new AerospikeMappingContext();
-	    }
-	   
-	   
-	   
-		@Test
-		public void createsQueryCorrectly() throws Exception {
+	@Mock
+	AerospikeConverter converter;
 
-			PartTree tree = new PartTree("findByFirstName", Person.class);
-			
-			
+	@Before
+	public void setUp() {
+		MockitoAnnotations.initMocks(this);
+		context = new AerospikeMappingContext();
+	}
 
-			AerospikeQueryCreator creator = new AerospikeQueryCreator(tree, getAccessor(converter,  "Oliver"),context);
-			Query query = creator.createQuery();
-			//assertThat(query, is(Query.query(Criteria.where("firstName").is("Oliver"))));
-		}
+	@SuppressWarnings({ "unused", "rawtypes" })
+	@Test
+	public void createsQueryCorrectly() throws Exception {
+		PartTree tree = new PartTree("findByFirstName", Person.class);
+
+		AerospikeQueryCreator creator = new AerospikeQueryCreator(tree, getAccessor(converter, "Oliver"), context);
+		Query query = creator.createQuery();
+		//assertThat(query, is(Query.query(Criteria.where("firstName").is("Oliver"))));
+	}
 
 }

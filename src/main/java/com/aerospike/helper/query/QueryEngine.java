@@ -42,39 +42,37 @@ import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.ResultSet;
 import com.aerospike.client.query.Statement;
+import com.aerospike.client.task.ExecuteTask;
+import com.aerospike.client.task.RegisterTask;
 import com.aerospike.helper.model.Index;
 import com.aerospike.helper.model.Module;
 import com.aerospike.helper.model.Namespace;
 import com.aerospike.helper.query.Qualifier.FilterOperation;
+
 /**
  * This class provides a multi-filter query engine that
  * augments the query capability in Aerospike.
- * To achieve this the class uses a UserDefined Function written in Lua to 
+ * To achieve this the class uses a UserDefined Function written in Lua to
  * provide the additional filtering. This UDF module packaged in the JAR and is automatically registered
  * with the cluster.
- * @author peter
  *
+ * @author peter
  */
-public class QueryEngine implements Closeable{
+public class QueryEngine implements Closeable {
 
-	protected static final String QUERY_MODULE = "as_utility";
-
-	protected static final String AS_UTILITY_PATH = "as_utility.lua";
-
+	protected static final String QUERY_MODULE = "as_utility"; //DO NOT use decimal places in the module name
+	protected static final String AS_UTILITY_PATH = QUERY_MODULE + ".lua";
 	protected static Logger log = Logger.getLogger(QueryEngine.class);
-
 	protected AerospikeClient client;
 	protected Map<String, Index> indexCache;
+	protected Map<String, Module> moduleCache;
+	protected TreeMap<String, Namespace> namespaceCache;
+	
 	public WritePolicy updatePolicy;
 	public WritePolicy insertPolicy;
 	public InfoPolicy infoPolicy;
 
-	protected Map<String, Module> moduleCache;
-
-	protected TreeMap<String, Namespace> namespaceCache;
-
-	public enum Meta
-	{	
+	public enum Meta {
 		KEY,
 		TTL,
 		EXPIRATION,
@@ -82,24 +80,41 @@ public class QueryEngine implements Closeable{
 
 		@Override
 		public String toString() {
-			switch(this) {
-			case KEY: return "__Key";
-			case TTL: return "__TTL";
-			case EXPIRATION: return "__Expiration";
-			case GENERATION: return "__generation";
-			default: throw new IllegalArgumentException();
+			switch (this) {
+				case KEY:
+					return "__key";
+				case EXPIRATION:
+					return "__Expiration";
+				case GENERATION:
+					return "__generation";
+				default:
+					throw new IllegalArgumentException();
 			}
 		}
 	}
 
-
 	/**
-	 * The Query engine is constructed by passing in an existing 
+	 * The Query engine is constructed by passing in an existing
 	 * AerospikeClient instance
-	 * @param client
+	 *
+	 * @param client An instance of Aerospike client
 	 */
 	public QueryEngine(AerospikeClient client) {
+		this();
+		setClient(client);
+	}
+
+	public QueryEngine() {
 		super();
+		Value.UseDoubleType = true; // Note: this supports the Double particle type
+	}
+
+	/**
+	 * Sets the AerospikeClient
+	 *
+	 * @param client An instance of AerospikeClient
+	 */
+	public void setClient(AerospikeClient client) {
 		this.client = client;
 		this.updatePolicy = new WritePolicy(this.client.writePolicyDefault);
 		this.updatePolicy.recordExistsAction = RecordExistsAction.UPDATE_ONLY;
@@ -119,23 +134,33 @@ public class QueryEngine implements Closeable{
 
 
 	/**
-	 * @param namespace
-	 * @param setName
-	 * @param filter
-	 * @param sortMap
-	 * @param qualifiers
-	 * @return
+	 * Select records filtered by Qualifiers
+	 *
+	 * @param namespace  Namespace to storing the data
+	 * @param set		Set storing the data
+	 * @param filter	 Aerospike Filter to be used
+	 * @param sortMap	<STRONG>NOT IMPLEMENTED</STRONG>
+	 * @param qualifiers Zero or more Qualifiers for the update query
+	 * @return A KeyRecordIterator to iterate over the results
 	 */
-	public KeyRecordIterator select(String namespace, String set, Filter filter, Map<String, String> sortMap, Qualifier... qualifiers){
+	public KeyRecordIterator select(String namespace, String set, Filter filter, Map<String, String> sortMap, Qualifier... qualifiers) {
 		Statement stmt = new Statement();
 		stmt.setNamespace(namespace);
 		stmt.setSetName(set);
 		if (filter != null)
 			stmt.setFilters(filter);
-		return select(stmt, sortMap, qualifiers);	
-
+		return select(stmt, sortMap, qualifiers);
 	}
-	public KeyRecordIterator select(Statement stmt, Map<String, String> sortMap, Qualifier... qualifiers){
+
+	/**
+	 * Select records filtered by Qualifiers
+	 *
+	 * @param stmt	   A Statement object containing Namespace, Set and the Bins to be returned.
+	 * @param sortMap	<STRONG>NOT IMPLEMENTED</STRONG>
+	 * @param qualifiers Zero or more Qualifiers for the update query
+	 * @return A KeyRecordIterator to iterate over the results
+	 */
+	public KeyRecordIterator select(Statement stmt, Map<String, String> sortMap, Qualifier... qualifiers) {
 		KeyRecordIterator results = null;
 
 		if (qualifiers != null && qualifiers.length > 0) {
@@ -151,11 +176,20 @@ public class QueryEngine implements Closeable{
 		} else {
 			RecordSet recordSet = this.client.query(null, stmt);
 			results = new KeyRecordIterator(stmt.getNamespace(), recordSet);
-		} 
+		}
 		return results;
 	}
 
-	public KeyRecordIterator select(String namespace, String set, Filter filter, Qualifier... qualifiers){
+	/**
+	 * Select records filtered by a Filter and Qualifiers
+	 *
+	 * @param namespace  Namespace to storing the data
+	 * @param set		Set storing the data
+	 * @param filter	 Aerospike Filter to be used
+	 * @param qualifiers Zero or more Qualifiers for the update query
+	 * @return A KeyRecordIterator to iterate over the results
+	 */
+	public KeyRecordIterator select(String namespace, String set, Filter filter, Qualifier... qualifiers) {
 		Statement stmt = new Statement();
 		stmt.setNamespace(namespace);
 		stmt.setSetName(set);
@@ -164,41 +198,51 @@ public class QueryEngine implements Closeable{
 		return select(stmt, qualifiers);
 	}
 
-
-
+	/**
+	 * Select records filtered by Qualifiers
+	 *
+	 * @param stmt	   A Statement object containing Namespace, Set and the Bins to be returned.
+	 * @param qualifiers Zero or more Qualifiers for the update query
+	 * @return A KeyRecordIterator to iterate over the results
+	 */
+	public KeyRecordIterator select(Statement stmt, Qualifier... qualifiers) {
+		return select(stmt, false, null, qualifiers);
+	}
 
 	/**
 	 * Select records filtered by Qualifiers
-	 * @param stmt
-	 * @param qualifiers
-	 * @return
+	 *
+	 * @param stmt	   A Statement object containing Namespace, Set and the Bins to be returned.
+	 * @param metaOnly   Set to true to return only the record meta data
+	 * @param qualifiers Zero or more Qualifiers for the update query
+	 * @return A KeyRecordIterator to iterate over the results
 	 */
-	public KeyRecordIterator select(Statement stmt, Qualifier... qualifiers){
-		return select(stmt, false, qualifiers);
-	}
-	public KeyRecordIterator select(Statement stmt, boolean metaOnly, Qualifier... qualifiers){
+	public KeyRecordIterator select(Statement stmt, boolean metaOnly, Node node, Qualifier... qualifiers) {
 		KeyRecordIterator results = null;
 		/*
 		 * no filters
 		 */
-		if (qualifiers == null || qualifiers.length == 0)  {
-			RecordSet recordSet = this.client.query(null, stmt);
+		if (qualifiers == null || qualifiers.length == 0) {
+			RecordSet recordSet = null;
+			if (node != null)
+				recordSet = this.client.queryNode(null, stmt, node);
+			else
+				recordSet = this.client.query(null, stmt);
 			results = new KeyRecordIterator(stmt.getNamespace(), recordSet);
 			return results;
 		}
 		/*
 		 * singleton using primary key
 		 */
-		if (qualifiers != null && qualifiers.length == 1 && qualifiers[0] instanceof KeyQualifier)  {
-			KeyQualifier kq = (KeyQualifier)qualifiers[0];
+		if (qualifiers != null && qualifiers.length == 1 && qualifiers[0] instanceof KeyQualifier) {
+			KeyQualifier kq = (KeyQualifier) qualifiers[0];
 			Key key = kq.makeKey(stmt.getNamespace(), stmt.getSetName());
-			//System.out.println(key);
 			Record record = null;
 			if (metaOnly)
 				record = this.client.getHeader(null, key);
 			else
 				record = this.client.get(null, key, stmt.getBinNames());
-			if (record == null){
+			if (record == null) {
 				results = new KeyRecordIterator(stmt.getNamespace());
 			} else {
 				KeyRecord keyRecord = new KeyRecord(key, record);
@@ -212,11 +256,11 @@ public class QueryEngine implements Closeable{
 		Map<String, Object> originArgs = new HashMap<String, Object>();
 		originArgs.put("includeAllFields", 1);
 
-		for (int i = 0; i < qualifiers.length; i++){
+		for (int i = 0; i < qualifiers.length; i++) {
 			Qualifier qualifier = qualifiers[i];
-			if (isIndexedBin(qualifier)){
+			if (isIndexedBin(qualifier)) {
 				Filter filter = qualifier.asFilter();
-				if (filter != null){
+				if (filter != null) {
 					stmt.setFilters(filter);
 					qualifiers[i] = null;
 					break;
@@ -226,18 +270,23 @@ public class QueryEngine implements Closeable{
 
 		String filterFuncStr = buildFilterFunction(qualifiers);
 		originArgs.put("filterFuncStr", filterFuncStr);
-		
+
 		if (metaOnly)
 			stmt.setAggregateFunction(this.getClass().getClassLoader(), AS_UTILITY_PATH, QUERY_MODULE, "query_meta", Value.get(originArgs));
 		else
 			stmt.setAggregateFunction(this.getClass().getClassLoader(), AS_UTILITY_PATH, QUERY_MODULE, "select_records", Value.get(originArgs));
+		ResultSet resultSet = null;
 
-		ResultSet resultSet = this.client.queryAggregate(null, stmt);
+		if (node != null) {
+			resultSet = this.client.queryAggregateNode(null, stmt, node);
+		} else {
+			resultSet = this.client.queryAggregate(null, stmt);
+		}
 		results = new KeyRecordIterator(stmt.getNamespace(), resultSet);
 		return results;
 	}
 
-	protected boolean isIndexedBin(Qualifier qualifier){
+	protected boolean isIndexedBin(Qualifier qualifier) {
 		Index index = this.indexCache.get(qualifier.getField());
 		if (index == null)
 			return false;
@@ -257,27 +306,54 @@ public class QueryEngine implements Closeable{
 	 * ***************************************************** 
 	 */
 
-	public void insert(String namespace, String set, Key key, List<Bin> bins){
-
-		insert(namespace, set, key, bins, 0)	;
-
+	/**
+	 * inserts a record. If the record exists, and exception will be thrown.
+	 *
+	 * @param namespace Namespace to store the record
+	 * @param set	   Set to store the record
+	 * @param key	   Key of the record
+	 * @param bins	  A list of Bins to insert
+	 */
+	public void insert(String namespace, String set, Key key, List<Bin> bins) {
+		insert(namespace, set, key, bins, 0);
 	}
-	
-	public void insert(String namespace, String set, Key key, List<Bin> bins, int ttl){
 
-		this.client.put(this.insertPolicy, key, bins.toArray(new Bin[0]));	
-
+	/**
+	 * inserts a record with a time to live. If the record exists, and exception will be thrown.
+	 *
+	 * @param namespace Namespace to store the record
+	 * @param set	   Set to store the record
+	 * @param key	   Key of the record
+	 * @param bins	  A list of Bins to insert
+	 * @param ttl	   The record time to live in seconds
+	 */
+	public void insert(String namespace, String set, Key key, List<Bin> bins, int ttl) {
+		this.client.put(this.insertPolicy, key, bins.toArray(new Bin[0]));
 	}
 
-	public void insert(Statement stmt, KeyQualifier keyQualifier, List<Bin> bins){
+	/**
+	 * inserts a record using a Statement and KeyQualifier. If the record exists, and exception will be thrown.
+	 *
+	 * @param stmt		 A Statement object containing Namespace and Set
+	 * @param keyQualifier KeyQualifier containin the primary key
+	 * @param bins		 A list of Bins to insert
+	 */
+	public void insert(Statement stmt, KeyQualifier keyQualifier, List<Bin> bins) {
 		insert(stmt, keyQualifier, bins, 0);
 	}
 
-	public void insert(Statement stmt, KeyQualifier keyQualifier, List<Bin> bins, int ttl){
+	/**
+	 * inserts a record, with a time to live, using a Statement and KeyQualifier. If the record exists, and exception will be thrown.
+	 *
+	 * @param stmt		 A Statement object containing Namespace and Set
+	 * @param keyQualifier KeyQualifier containin the primary key
+	 * @param bins		 A list of Bins to insert
+	 * @param ttl		  The record time to live in seconds
+	 */
+	public void insert(Statement stmt, KeyQualifier keyQualifier, List<Bin> bins, int ttl) {
 		Key key = keyQualifier.makeKey(stmt.getNamespace(), stmt.getSetName());
-//		Key key = new Key(stmt.getNamespace(), stmt.getSetName(), keyQualifier.getValue1());
-		this.client.put(this.insertPolicy, key, bins.toArray(new Bin[0]));	
-
+		//		Key key = new Key(stmt.getNamespace(), stmt.getSetName(), keyQualifier.getValue1());
+		this.client.put(this.insertPolicy, key, bins.toArray(new Bin[0]));
 	}
 
 
@@ -288,16 +364,18 @@ public class QueryEngine implements Closeable{
 	 * 
 	 * ***************************************************** 
 	 */
+
 	/**
 	 * The list of Bins will update each record that match the Qualifiers supplied.
-	 * @param stmt 
-	 * @param bins
-	 * @param qualifiers
-	 * @return
+	 *
+	 * @param stmt	   A Statement object containing Namespace and Set
+	 * @param bins	   A list of Bin objects with the values to updated
+	 * @param qualifiers Zero or more Qualifiers for the update query
+	 * @return returns a Map containing a number of successful updates. The Map will contain 2 keys "read" and "write", the values will be the count of successful operations
 	 */
-	public Map<String, Long> update(Statement stmt, List<Bin> bins, Qualifier... qualifiers){
-		if (qualifiers != null && qualifiers.length == 1 && qualifiers[0] instanceof KeyQualifier)  {
-			KeyQualifier keyQualifier = (KeyQualifier)qualifiers[0];
+	public Map<String, Long> update(Statement stmt, List<Bin> bins, Qualifier... qualifiers) {
+		if (qualifiers != null && qualifiers.length == 1 && qualifiers[0] instanceof KeyQualifier) {
+			KeyQualifier keyQualifier = (KeyQualifier) qualifiers[0];
 			Key key = keyQualifier.makeKey(stmt.getNamespace(), stmt.getSetName());
 			this.client.put(this.updatePolicy, key, bins.toArray(new Bin[0]));
 			Map<String, Long> result = new HashMap<String, Long>();
@@ -305,15 +383,15 @@ public class QueryEngine implements Closeable{
 			result.put("write", 1L);
 			return result;
 		} else {
-			KeyRecordIterator results = select(stmt, true, qualifiers);
+			KeyRecordIterator results = select(stmt, true, null, qualifiers);
 			return update(results, bins);
 		}
 	}
 
-	private Map<String, Long> update(KeyRecordIterator results, List<Bin> bins){
+	private Map<String, Long> update(KeyRecordIterator results, List<Bin> bins) {
 		long readCount = 0;
 		long updateCount = 0;
-		while (results.hasNext()){
+		while (results.hasNext()) {
 			KeyRecord keyRecord = results.next();
 			readCount++;
 			WritePolicy up = new WritePolicy(updatePolicy);
@@ -321,7 +399,7 @@ public class QueryEngine implements Closeable{
 			try {
 				client.put(up, keyRecord.key, bins.toArray(new Bin[0]));
 				updateCount++;
-			} catch (AerospikeException e){
+			} catch (AerospikeException e) {
 				System.out.println(keyRecord.key);
 			}
 		}
@@ -338,8 +416,26 @@ public class QueryEngine implements Closeable{
 	 * 
 	 * ***************************************************** 
 	 */
-	public Map<String, Long> delete(Statement stmt, Qualifier... qualifiers){
-		if (qualifiers.length == 1 && qualifiers[0] instanceof KeyQualifier){
+
+	/**
+	 * Deletes the records specified by the Statement and Qualifiers
+	 *
+	 * @param stmt	   A Statement object containing Namespace and Set
+	 * @param qualifiers Zero or more Qualifiers for the update query
+	 * @return returns a Map containing a number of successful updates. The Map will contain 2 keys "read" and "write", the values will be the count of successful operations
+	 */
+	public Map<String, Long> delete(Statement stmt, Qualifier... qualifiers) {
+		if (qualifiers == null || qualifiers.length == 0) {
+			/*
+			 * There are no qualifiers, so delete every record in the set
+			 * using Scan UDF delete
+			 */
+			ExecuteTask task = client.execute(null, stmt, QUERY_MODULE, "delete_record");
+			task.waitTillComplete();
+			return null;
+		}
+
+		if (qualifiers.length == 1 && qualifiers[0] instanceof KeyQualifier) {
 			KeyQualifier keyQualifier = (KeyQualifier) qualifiers[0];
 			Key key = keyQualifier.makeKey(stmt.getNamespace(), stmt.getSetName());
 			this.client.delete(null, key);
@@ -348,21 +444,21 @@ public class QueryEngine implements Closeable{
 			map.put("write", 1L);
 			return map;
 		}
-		KeyRecordIterator results = select(stmt, true, qualifiers);
+		KeyRecordIterator results = select(stmt, true, null, qualifiers);
 		return delete(results);
 	}
 
-	private Map<String, Long> delete(KeyRecordIterator results){
+	private Map<String, Long> delete(KeyRecordIterator results) {
 		long readCount = 0;
 		long updateCount = 0;
-		while (results.hasNext()){
+		while (results.hasNext()) {
 			KeyRecord keyRecord = results.next();
 			readCount++;
 			try {
 				if (client.delete(null, keyRecord.key))
 					updateCount++;
-			} catch (AerospikeException e){
-				log.error("Unexpected exception deleting "+ keyRecord.key, e);
+			} catch (AerospikeException e) {
+				log.error("Unexpected exception deleting " + keyRecord.key, e);
 			}
 		}
 		Map<String, Long> map = new HashMap<String, Long>();
@@ -371,18 +467,15 @@ public class QueryEngine implements Closeable{
 		return map;
 	}
 
-
-
 	private String buildSortFunction(Map<String, String> sortMap) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
-
 	private String buildFilterFunction(Qualifier[] qualifiers) {
 		int count = 0;
 		StringBuilder sb = new StringBuilder("if ");
-		for (int i = 0; i < qualifiers.length; i++){
+		for (int i = 0; i < qualifiers.length; i++) {
 			if (qualifiers[i] == null) //Skip nulls
 				continue;
 			if (qualifiers[i] instanceof KeyQualifier) //Skip primary key -- should not happen
@@ -397,45 +490,55 @@ public class QueryEngine implements Closeable{
 		return sb.toString();
 	}
 
-
 	private void registerUDF() {
-		if (getModule(QUERY_MODULE+".lua") == null){ // register the as_utility udf module
+		if (!this.moduleCache.containsKey(QUERY_MODULE + ".lua")) { // register the as_utility udf module
 
-			this.client.register(null, this.getClass().getClassLoader(), 
-					AS_UTILITY_PATH, 
-					QUERY_MODULE+".lua", Language.LUA);
-
+			RegisterTask task = this.client.register(null, this.getClass().getClassLoader(),
+					AS_UTILITY_PATH,
+					QUERY_MODULE + ".lua", Language.LUA);
+			task.isDone();
 		}
 	}
 
-	public InfoPolicy getInfoPolicy(){
-		if (this.infoPolicy == null){
+	/**
+	 * Gets the current InfoPolicy
+	 *
+	 * @return the current InfoPolicy
+	 */
+	public InfoPolicy getInfoPolicy() {
+		if (this.infoPolicy == null) {
 			this.infoPolicy = new InfoPolicy();
 		}
 		return this.infoPolicy;
 	}
 
-	public void refreshCluster(){
+	/**
+	 * refreshes the cached Cluster information
+	 */
+	public void refreshCluster() {
 		refreshNamespaces();
 		refreshIndexes();
 		refreshModules();
 	}
-	
-	public synchronized void refreshNamespaces(){
+
+	/**
+	 * refreshes the cached Namespace information
+	 */
+	public synchronized void refreshNamespaces() {
 		/*
 		 * cache namespaces
 		 */
-		if (this.namespaceCache == null){
+		if (this.namespaceCache == null) {
 			this.namespaceCache = new TreeMap<String, Namespace>();
 			Node[] nodes = client.getNodes();
-			for (Node node : nodes){
+			for (Node node : nodes) {
 				try {
 					String namespaceString = Info.request(getInfoPolicy(), node, "namespaces");
-					if (!namespaceString.isEmpty()){
+					if (!namespaceString.isEmpty()) {
 						String[] namespaceList = namespaceString.split(";");
-						for (String namespace : namespaceList){
+						for (String namespace : namespaceList) {
 							Namespace ns = this.namespaceCache.get(namespace);
-							if (ns == null){
+							if (ns == null) {
 								ns = new Namespace(namespace);
 								this.namespaceCache.put(namespace, ns);
 							}
@@ -444,21 +547,21 @@ public class QueryEngine implements Closeable{
 					}
 				} catch (AerospikeException e) {
 					log.error("Error geting Namespaces ", e);
-				}	
+				}
 
 			}
 		}
 	}
 
-	public void refreshNamespaceData(Node node, Namespace namespace){
+	public void refreshNamespaceData(Node node, Namespace namespace) {
 		/*
 		 * refresh namespace data
 		 */
 		try {
-			String nameSpaceString = Info.request(infoPolicy, node, "namespace/"+namespace);
+			String nameSpaceString = Info.request(infoPolicy, node, "namespace/" + namespace);
 			namespace.mergeNamespaceInfo(nameSpaceString);
-			String setsString = Info.request(infoPolicy, node, "sets/"+namespace);
-			if (!setsString.isEmpty()){
+			String setsString = Info.request(infoPolicy, node, "sets/" + namespace);
+			if (!setsString.isEmpty()) {
 				String[] sets = setsString.split(";");
 				for (String setData : sets) {
 					namespace.mergeSet(setData);
@@ -466,19 +569,32 @@ public class QueryEngine implements Closeable{
 			}
 		} catch (AerospikeException e) {
 			log.error("Error geting Namespace details", e);
-		}	
+		}
 	}
 
+	/**
+	 * Get as specific Namespace from the cache
+	 *
+	 * @param namespace Namespace name
+	 * @return The Namespace model object
+	 */
 	public Namespace getNamespace(String namespace) {
 		return namespaceCache.get(namespace);
 	}
 
+	/**
+	 * Gets all the Namespaces from the cache
+	 *
+	 * @return A collection of Namespace model objects
+	 */
 	public Collection<Namespace> getNamespaces() {
 		return namespaceCache.values();
 	}
 
-	
-	public synchronized void refreshIndexes(){
+	/**
+	 * refreshes the Index cacge from the Cluster
+	 */
+	public synchronized void refreshIndexes() {
 		/*
 		 * cache index by Bin name
 		 */
@@ -486,54 +602,82 @@ public class QueryEngine implements Closeable{
 			this.indexCache = new TreeMap<String, Index>();
 
 		Node[] nodes = client.getNodes();
-		for (Node node : nodes){
+		for (Node node : nodes) {
 			if (node.isActive()) {
 				try {
 					String indexString = Info.request(getInfoPolicy(), node, "sindex");
-					if (!indexString.isEmpty()){
+					if (!indexString.isEmpty()) {
 						String[] indexList = indexString.split(";");
-						for (String oneIndexString : indexList){
-							Index index = new Index(oneIndexString);	
-							this.indexCache.put(index.getBin(), index);
+						for (String oneIndexString : indexList) {
+							Index index = new Index(oneIndexString);
+							String indexBin = index.getBin();
+							this.indexCache.put(indexBin, index);
 						}
 					}
 					break;
 				} catch (AerospikeException e) {
 					log.error("Error geting Index informaton", e);
-				}	
+				}
 			}
 		}
 	}
 
-	public synchronized Index getIndex(String binName){
+	/**
+	 * Gets a specific index from the index cache by Bin name
+	 *
+	 * @param binName The name of the indexed Bin
+	 * @return An Index model object
+	 */
+	public synchronized Index getIndex(String binName) {
 		return this.indexCache.get(binName);
 	}
 
-	public synchronized void refreshModules(){
+	/**
+	 * refreshes the Module cache from the cluster. The Module cache contains a list of register UDF modules.
+	 */
+	public synchronized void refreshModules() {
 		if (this.moduleCache == null)
 			this.moduleCache = new TreeMap<String, Module>();
+		boolean loadedModules = false;
 		Node[] nodes = client.getNodes();
-		for (Node node : nodes){
-			if (node.isActive()){
+		for (Node node : nodes) {
+			try {
+
 				String packagesString = Info.request(infoPolicy, node, "udf-list");
-				if (!packagesString.isEmpty()){
+				if (!packagesString.isEmpty()) {
 					String[] packagesList = packagesString.split(";");
-					for (String pkgString : packagesList){
+					for (String pkgString : packagesList) {
 						Module module = new Module(pkgString);
 						String udfString = Info.request(infoPolicy, node, "udf-get:filename=" + module.getName());
 						module.setDetailInfo(udfString);//gen=qgmyp0d8hQNvJdnR42X3BXgUGPE=;type=LUA;recordContent=bG9jYWwgZnVuY3Rpb24gcHV0QmluKHIsbmFtZSx2YWx1ZSkKICAgIGlmIG5vdCBhZXJvc3Bpa2U6ZXhpc3RzKHIpIHRoZW4gYWVyb3NwaWtlOmNyZWF0ZShyKSBlbmQKICAgIHJbbmFtZV0gPSB2YWx1ZQogICAgYWVyb3NwaWtlOnVwZGF0ZShyKQplbmQKCi0tIFNldCBhIHBhcnRpY3VsYXIgYmluCmZ1bmN0aW9uIHdyaXRlQmluKHIsbmFtZSx2YWx1ZSkKICAgIHB1dEJpbihyLG5hbWUsdmFsdWUpCmVuZAoKLS0gR2V0IGEgcGFydGljdWxhciBiaW4KZnVuY3Rpb24gcmVhZEJpbihyLG5hbWUpCiAgICByZXR1cm4gcltuYW1lXQplbmQKCi0tIFJldHVybiBnZW5lcmF0aW9uIGNvdW50IG9mIHJlY29yZApmdW5jdGlvbiBnZXRHZW5lcmF0aW9uKHIpCiAgICByZXR1cm4gcmVjb3JkLmdlbihyKQplbmQKCi0tIFVwZGF0ZSByZWNvcmQgb25seSBpZiBnZW4gaGFzbid0IGNoYW5nZWQKZnVuY3Rpb24gd3JpdGVJZkdlbmVyYXRpb25Ob3RDaGFuZ2VkKHIsbmFtZSx2YWx1ZSxnZW4pCiAgICBpZiByZWNvcmQuZ2VuKHIpID09IGdlbiB0aGVuCiAgICAgICAgcltuYW1lXSA9IHZhbHVlCiAgICAgICAgYWVyb3NwaWtlOnVwZGF0ZShyKQogICAgZW5kCmVuZAoKLS0gU2V0IGEgcGFydGljdWxhciBiaW4gb25seSBpZiByZWNvcmQgZG9lcyBub3QgYWxyZWFkeSBleGlzdC4KZnVuY3Rpb24gd3JpdGVVbmlxdWUocixuYW1lLHZhbHVlKQogICAgaWYgbm90IGFlcm9zcGlrZTpleGlzdHMocikgdGhlbiAKICAgICAgICBhZXJvc3Bpa2U6Y3JlYXRlKHIpIAogICAgICAgIHJbbmFtZV0gPSB2YWx1ZQogICAgICAgIGFlcm9zcGlrZTp1cGRhdGUocikKICAgIGVuZAplbmQKCi0tIFZhbGlkYXRlIHZhbHVlIGJlZm9yZSB3cml0aW5nLgpmdW5jdGlvbiB3cml0ZVdpdGhWYWxpZGF0aW9uKHIsbmFtZSx2YWx1ZSkKICAgIGlmICh2YWx1ZSA+PSAxIGFuZCB2YWx1ZSA8PSAxMCkgdGhlbgogICAgICAgIHB1dEJpbihyLG5hbWUsdmFsdWUpCiAgICBlbHNlCiAgICAgICAgZXJyb3IoIjEwMDA6SW52YWxpZCB2YWx1ZSIpIAogICAgZW5kCmVuZAoKLS0gUmVjb3JkIGNvbnRhaW5zIHR3byBpbnRlZ2VyIGJpbnMsIG5hbWUxIGFuZCBuYW1lMi4KLS0gRm9yIG5hbWUxIGV2ZW4gaW50ZWdlcnMsIGFkZCB2YWx1ZSB0byBleGlzdGluZyBuYW1lMSBiaW4uCi0tIEZvciBuYW1lMSBpbnRlZ2VycyB3aXRoIGEgbXVsdGlwbGUgb2YgNSwgZGVsZXRlIG5hbWUyIGJpbi4KLS0gRm9yIG5hbWUxIGludGVnZXJzIHdpdGggYSBtdWx0aXBsZSBvZiA5LCBkZWxldGUgcmVjb3JkLiAKZnVuY3Rpb24gcHJvY2Vzc1JlY29yZChyLG5hbWUxLG5hbWUyLGFkZFZhbHVlKQogICAgbG9jYWwgdiA9IHJbbmFtZTFdCgogICAgaWYgKHYgJSA5ID09IDApIHRoZW4KICAgICAgICBhZXJvc3Bpa2U6cmVtb3ZlKHIpCiAgICAgICAgcmV0dXJuCiAgICBlbmQKCiAgICBpZiAodiAlIDUgPT0gMCkgdGhlbgogICAgICAgIHJbbmFtZTJdID0gbmlsCiAgICAgICAgYWVyb3NwaWtlOnVwZGF0ZShyKQogICAgICAgIHJldHVybgogICAgZW5kCgogICAgaWYgKHYgJSAyID09IDApIHRoZW4KICAgICAgICByW25hbWUxXSA9IHYgKyBhZGRWYWx1ZQogICAgICAgIGFlcm9zcGlrZTp1cGRhdGUocikKICAgIGVuZAplbmQKCi0tIFNldCBleHBpcmF0aW9uIG9mIHJlY29yZAotLSBmdW5jdGlvbiBleHBpcmUocix0dGwpCi0tICAgIGlmIHJlY29yZC50dGwocikgPT0gZ2VuIHRoZW4KLS0gICAgICAgIHJbbmFtZV0gPSB2YWx1ZQotLSAgICAgICAgYWVyb3NwaWtlOnVwZGF0ZShyKQotLSAgICBlbmQKLS0gZW5kCg==;
 						this.moduleCache.put(module.getName(), module);
 					}
 				}
+				loadedModules = true;
 				break;
+			} catch (AerospikeException e) {
+
 			}
+		}
+		if (!loadedModules) {
+			throw new ClusterRefreshError("Cannot find UDF modules");
 		}
 	}
 
-	public synchronized Module getModule(String moduleName){
+	/**
+	 * Gets a specific Module from the cache by name
+	 *
+	 * @param moduleName The name of the module
+	 * @return A Module model object
+	 */
+	public synchronized Module getModule(String moduleName) {
 		return this.moduleCache.get(moduleName);
 	}
 
+	/**
+	 * closes the QueryEngine, clearing the cached information are closing the AerospikeClient.
+	 * Once the QueryEngine is closed, it cannot be used, nor can the AerospikeClient.
+	 */
 	@Override
 	public void close() throws IOException {
 		if (this.client != null)

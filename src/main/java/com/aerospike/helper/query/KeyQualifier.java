@@ -17,37 +17,43 @@ package com.aerospike.helper.query;
 
 import com.aerospike.client.Key;
 import com.aerospike.client.Value;
+
 /**
  * Qualifier used to query by primary key
- * @author peter
  *
+ * @author peter
  */
 public class KeyQualifier extends Qualifier {
+
+	private static final long serialVersionUID = 2430949321378171078L;
+	
 	boolean hasDigest = false;
+
 	public KeyQualifier(Value value) {
 		super(QueryEngine.Meta.KEY.toString(), FilterOperation.EQ, value);
 	}
+
 	public KeyQualifier(byte[] digest) {
 		super(QueryEngine.Meta.KEY.toString(), FilterOperation.EQ, null);
 		this.internalMap.put("digest", digest);
 		this.hasDigest = true;
 	}
+
 	@Override
 	protected String luaFieldString(String field) {
 		return "digest";
 	}
 
-	public byte[] getDigest(){
+	public byte[] getDigest() {
 		return (byte[]) this.internalMap.get("digest");
 	}
 
-	public Key makeKey(String namespace, String set){
-		if (hasDigest){
+	public Key makeKey(String namespace, String set) {
+		if (hasDigest) {
 			byte[] digest = getDigest();
 			return new Key(namespace, digest, null, null);
 		} else {
 			return new Key(namespace, set, getValue1());
 		}
-
 	}
 }
