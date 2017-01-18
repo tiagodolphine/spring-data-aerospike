@@ -24,6 +24,7 @@ public class AerospikeCache implements Cache {
 	protected String namespace;
 	protected String set;
 	protected WritePolicy createOnly;
+	protected WritePolicy create;
 
 	public AerospikeCache(String namespace, String set, AerospikeClient client,
 						  long expiration){
@@ -32,6 +33,10 @@ public class AerospikeCache implements Cache {
 		this.set = set;
 		this.createOnly = new WritePolicy(client.writePolicyDefault);
 		this.createOnly.recordExistsAction = RecordExistsAction.CREATE_ONLY;
+		this.createOnly.expiration = (int) expiration;
+
+		this.create = new WritePolicy(client.writePolicyDefault);
+		this.create.expiration = (int) expiration;
 	}
 
 	protected Key getKey(Object key){
@@ -78,7 +83,7 @@ public class AerospikeCache implements Cache {
 
 	@Override
 	public void put(Object key, Object value) {
-		client.put(null, getKey(key), new Bin(VALUE, value));
+		client.put(create, getKey(key), new Bin(VALUE, value));
 	}
 
 	@Override
