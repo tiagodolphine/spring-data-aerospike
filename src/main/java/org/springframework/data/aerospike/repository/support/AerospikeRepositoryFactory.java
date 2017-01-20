@@ -3,11 +3,6 @@
  */
 package org.springframework.data.aerospike.repository.support;
 
-import static org.springframework.data.querydsl.QueryDslUtils.QUERY_DSL_PRESENT;
-
-import java.io.Serializable;
-import java.lang.reflect.Method;
-
 import org.springframework.data.aerospike.core.AerospikeOperations;
 import org.springframework.data.aerospike.mapping.AerospikePersistentEntity;
 import org.springframework.data.aerospike.mapping.AerospikePersistentProperty;
@@ -18,6 +13,7 @@ import org.springframework.data.keyvalue.repository.support.QuerydslKeyValueRepo
 import org.springframework.data.keyvalue.repository.support.SimpleKeyValueRepository;
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.mapping.model.MappingException;
+import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.querydsl.QueryDslPredicateExecutor;
 import org.springframework.data.repository.core.EntityInformation;
 import org.springframework.data.repository.core.NamedQueries;
@@ -32,6 +28,11 @@ import org.springframework.data.repository.query.QueryMethod;
 import org.springframework.data.repository.query.RepositoryQuery;
 import org.springframework.data.repository.query.parser.AbstractQueryCreator;
 import org.springframework.util.Assert;
+
+import java.io.Serializable;
+import java.lang.reflect.Method;
+
+import static org.springframework.data.querydsl.QueryDslUtils.QUERY_DSL_PRESENT;
 
 /**
  * @author Peter Milne
@@ -158,13 +159,11 @@ public class AerospikeRepositoryFactory extends RepositoryFactorySupport {
 			this.queryCreator = queryCreator;
 		}
 
-		/*
-		 * (non-Javadoc)
-		 * @see org.springframework.data.repository.query.QueryLookupStrategy#resolveQuery(java.lang.reflect.Method, org.springframework.data.repository.core.RepositoryMetadata, org.springframework.data.repository.core.NamedQueries)
-		 */
-		public RepositoryQuery resolveQuery(Method method, RepositoryMetadata metadata, NamedQueries namedQueries) {
+		@Override
+		public RepositoryQuery resolveQuery(Method method, RepositoryMetadata repositoryMetadata,
+											ProjectionFactory projectionFactory, NamedQueries namedQueries) {
 
-			QueryMethod queryMethod = new QueryMethod(method, metadata);
+			QueryMethod queryMethod = new QueryMethod(method, repositoryMetadata, projectionFactory);
 			return new AerospikePartTreeQuery(queryMethod, evaluationContextProvider, this.aerospikeOperations, this.queryCreator);
 		}
 	}

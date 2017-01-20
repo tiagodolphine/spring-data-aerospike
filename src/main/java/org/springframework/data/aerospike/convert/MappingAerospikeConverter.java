@@ -15,14 +15,10 @@
  */
 package org.springframework.data.aerospike.convert;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.aerospike.client.Bin;
+import com.aerospike.client.Record;
+import com.aerospike.client.Value;
+import com.aerospike.client.Value.MapValue;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
@@ -43,10 +39,7 @@ import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
-import com.aerospike.client.Bin;
-import com.aerospike.client.Record;
-import com.aerospike.client.Value;
-import com.aerospike.client.Value.MapValue;
+import java.util.*;
 
 /**
  * An implementation of {@link AerospikeConverter} to read domain objects from {@link AerospikeData} and write domain
@@ -72,6 +65,7 @@ public class MappingAerospikeConverter implements AerospikeConverter {
 	@SuppressWarnings("rawtypes")
 	public MappingAerospikeConverter() {
 		this.mappingContext = new AerospikeMappingContext();
+
 		DefaultConversionService defaultConversionService = new DefaultConversionService();
 		defaultConversionService.addConverter(new LongToBoolean());
 
@@ -85,7 +79,8 @@ public class MappingAerospikeConverter implements AerospikeConverter {
 		this.entityInstantiators = new EntityInstantiators();
 		this.simpleTypeHolder = AerospikeSimpleTypes.HOLDER;
 
-		this.typeMapper = new DefaultTypeMapper<AerospikeData>(AerospikeTypeAliasAccessor.INSTANCE, mappingContext, Arrays.asList(SimpleTypeInformationMapper.INSTANCE));
+		this.typeMapper = new DefaultTypeMapper<AerospikeData>(AerospikeTypeAliasAccessor.INSTANCE, mappingContext,
+				Arrays.asList(new SimpleTypeInformationMapper()));
 	}
 
 	/*

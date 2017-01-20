@@ -21,7 +21,7 @@
 
     <properties>
         <aerospike>3.2.3</aerospike>
-        <springdata.commons>1.11.0.RELEASE</springdata.commons>
+        <springdata.commons>1.12.6.RELEASE</springdata.commons>
         <springdata.keyvalue>1.0.0.M1</springdata.keyvalue>
         <dist.key>DATAAERO</dist.key>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

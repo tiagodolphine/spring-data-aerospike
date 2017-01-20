@@ -3,12 +3,12 @@
  */
 package org.springframework.data.aerospike.repository.query;
 
-import java.util.Iterator;
-
 import org.springframework.data.aerospike.core.AerospikeWriter;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.util.Assert;
+
+import java.util.Iterator;
 
 /**
  *
@@ -47,6 +47,11 @@ public class ConvertingParameterAccessor implements AerospikeParameterAccessor {
 	@Override
 	public Sort getSort() {
 		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Class<?> getDynamicProjection() {
 		return null;
 	}
 
